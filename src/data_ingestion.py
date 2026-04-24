@@ -51,9 +51,17 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     Preprocess the data by handling missing values and encoding categorical variables.
     """
     try:
-        df.drop(columns=['Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4'], inplace=True)
-        df.rename(columns={'V1':'target', 'V2':'text'}, inplace=True)
-        logger.debug('Data prepreocessing completed successfully')
+        df.drop(columns=['Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4'], inplace=True, errors='ignore')
+        df.rename(columns={
+            'V1': 'target',
+            'V2': 'text',
+            'v1': 'target',
+            'v2': 'text'
+        }, inplace=True)
+        if 'target' not in df.columns or 'text' not in df.columns:
+            missing = [c for c in ['target', 'text'] if c not in df.columns]
+            raise KeyError(f"Missing columns after rename: {missing}")
+        logger.debug('Data preprocessing completed successfully')
         return df
     except KeyError as e:
         logger.error('Missing expected columns in the DataFrame: %s', e)
@@ -83,6 +91,16 @@ def save_data(train_data:pd.DataFrame, test_data: pd.DataFrame, data_path: str) 
         raise
 
 def main():
+    """save the train test datasets."""
     try:
         test_size = 0.2
-        data_path = 'https://raw.githubusercontent.com/ten2i/MLOps-ML-Pipeline-with-DVC-S3-etc/main/data'
+        data_path = 'https://raw.githubusercontent.com/tsetan13821/MLOps-ML-Pipeline-with-DVC-S3-etc/refs/heads/main/experiments/spam.csv'
+        df = load_data(data_url = data_path)
+        final_df = preprocess_data(df)
+        train_data , test_data = train_test_split(final_df, test_size=test_size, random_state=42)
+        save_data(train_data, test_data, data_path = './data')
+    except Exception as e:
+        logger.error('Failed to complete the data ingestion process: %s', e)
+        print(f"Error: {e}")
+if __name__ == "__main__":
+    main()  
